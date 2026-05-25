@@ -1,0 +1,3 @@
+[[edge_functions]]
+function = "ip-logger-discord"
+path = "/log" # This means requests to yourdomain.com/log will hit the function
