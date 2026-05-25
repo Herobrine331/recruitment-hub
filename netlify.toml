@@ -1,3 +1,15 @@
+[build]
+  # This tells Netlify where your static site code is located.
+  publish = "dist" 
+  # Adjust 'dist' if your build output folder is named differently (e.g., 'public', 'build').
+
+[build.environment]
+  # Global variables that apply to the build process.
+  # (We don't put the secret here, only the global config)
+
+# This section routes the specific function call.
 [[edge_functions]]
-function = "ip-logger-discord"
-path = "/log" # This means requests to yourdomain.com/log will hit the function
+  # The name of the function file (must match the name in exports.handler = async functionName)
+  function = "ip-logger-discord" 
+  # The path on your live site that will trigger this function.
+  path = "/log" 
