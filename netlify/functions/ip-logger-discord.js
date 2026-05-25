@@ -2,27 +2,30 @@
 
 /**
  * Logs the originating IP address and basic request metadata to a Discord Webhook.
- * Protocol Status: Optimal. Requires secure environment variable setup.
+ * 
+ * PROTOCOL STATUS: Optimal. This function requires the DISCORD_WEBHOOK_URL 
+ * environment variable to be set in the Netlify Site Settings.
+ * 
  * @param {object} event - The event object passed by Netlify Edge Functions.
  * @returns {object} A standard HTTP response.
  */
 exports.handler = async (event, context) => {
-    // --- 1. DATA EXTRACTION WITH FALLBACK LOGIC ---
-    // We use optional chaining and logical OR to provide defaults if headers are missing.
+    // --- 1. DATA EXTRACTION AND FALLBACK LOGIC ---
+    // We use optional chaining and logical OR to provide default context 
+    // if the headers are missing (critical for manual testing/sparse input).
     
-    // IP Address: Prioritize X-Forwarded-For, then CF-Connecting-IP
+    // IP Address: Prioritize X-Forwarded-For, then CF-Connecting-IP.
     const clientIp = event.headers['x-forwarded-for'] || event.headers['cf-connecting-ip'] || 'UNKNOWN_IP_CONTEXT';
     
-    // User Agent: Fallback to a generic message if the header is missing.
+    // User Agent: Fallback for manual/sparse calls.
     const userAgent = event.headers['user-agent'] || 'MANUAL_TEST_CALL_NO_USER_AGENT';
     
-    // Referrer: Fallback to a generic message.
+    // Referrer: Fallback for manual/sparse calls.
     const referrer = event.headers['referer'] || 'MANUAL_TEST_CALL_NO_REFERER';
     
     // Path/Method: Use the event properties directly.
     const path = event.path || 'UNKNOWN_PATH';
     const method = event.method || 'UNKNOWN_METHOD';
-
 
     // 2. Prepare the structured data payload
     const logData = {
@@ -36,7 +39,7 @@ exports.handler = async (event, context) => {
 
     // 3. Format the payload for Discord's JSON structure
     const discordPayload = {
-        content: `🚨 **[ACCESS LOG]** 🚨\n*Attempted request logged. Context: ${method} ${path}*`,
+        content: `🚨 **[ACCESS LOG]** 🚨\n*Request detected from ${logData.ip_address} at ${logData.timestamp}*`,
         embeds: [
             {
                 title: `🌐 Client Connection Report`,
@@ -56,7 +59,7 @@ exports.handler = async (event, context) => {
     const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
     if (!webhookUrl) {
-        console.error("!!! LOGGING FAILURE !!! Webhook URL is missing in environment variables. Check Netlify settings.");
+        console.error("!!! LOGGING FAILURE !!! Webhook URL is missing. Check Netlify environment variables.");
         return { statusCode: 500, body: "Internal Error: Configuration Missing" };
     }
 
@@ -68,7 +71,7 @@ exports.handler = async (event, context) => {
             body: JSON.stringify(discordPayload)
         });
         
-        // Check for non-2xx status codes
+        // Check for non-2xx status codes (API rejection, rate limiting, etc.)
         if (!response.ok) {
              const errorText = await response.text();
              console.error(`!!! LOGGING FAILURE !!! Discord API rejected request. Status: ${response.status}. Details: ${errorText}`);
@@ -82,7 +85,7 @@ exports.handler = async (event, context) => {
         console.error(`!!! LOGGING FAILURE !!! Critical network or runtime error: ${error.message}`);
     }
 
-    // Final response to the client.
+    // Always return a clean, successful response to the client, regardless of logging outcome.
     return {
         statusCode: 200,
         headers: { 'Content-Type': 'text/plain' },
